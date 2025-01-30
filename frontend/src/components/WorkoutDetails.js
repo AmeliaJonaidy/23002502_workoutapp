@@ -1,78 +1,80 @@
-import { useState } from 'react'
-import { useWorkoutsContext } from '../hooks/useWorkoutsContext'
-
-// date fns
-import formatDistanceToNow from 'date-fns/formatDistanceToNow'
+import { useState } from 'react';
+import { useWorkoutsContext } from '../hooks/useWorkoutsContext';
+import { useAuthContext } from '../hooks/useAuthContext';
+import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 
 const WorkoutDetails = ({ workout }) => {
-  const { dispatch } = useWorkoutsContext()
-
-  // State to handle editing form
-  const [isEditing, setIsEditing] = useState(false)
-  const [editedTitle, setEditedTitle] = useState(workout.title)
-  const [editedLoad, setEditedLoad] = useState(workout.load)
-  const [editedReps, setEditedReps] = useState(workout.reps)
+  const { dispatch } = useWorkoutsContext();
+  const { user } = useAuthContext();
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(workout.title);
+  const [load, setLoad] = useState(workout.load);
+  const [reps, setReps] = useState(workout.reps);
 
   const handleClick = async () => {
-    const response = await fetch(
-      `${process.env.REACT_APP_API_URL}/api/workouts/${workout._id}`, {
-      method: 'DELETE'
-    })
-    const json = await response.json()
+    if (!user) {
+      return;
+    }
+
+    const response = await fetch('/api/workouts/' + workout._id, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${user.token}`
+      }
+    });
+    const json = await response.json();
 
     if (response.ok) {
-      dispatch({ type: 'DELETE_WORKOUT', payload: json })
+      dispatch({ type: 'DELETE_WORKOUT', payload: json });
     }
-  }
+  };
 
   const handleEdit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const updatedWorkout = {
-      title: editedTitle,
-      load: editedLoad,
-      reps: editedReps
+    if (!user) {
+      return;
     }
 
-    const response = await fetch(
-      `${process.env.REACT_APP_API_URL}/api/workouts/${workout._id}`, {
+    const updatedWorkout = { title, load, reps };
+
+    const response = await fetch('/api/workouts/' + workout._id, {
       method: 'PATCH',
-      body: JSON.stringify(updatedWorkout),
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.token}`
       },
-    })
-    const json = await response.json()
+      body: JSON.stringify(updatedWorkout)
+    });
+    const json = await response.json();
 
     if (response.ok) {
-      dispatch({ type: 'UPDATE_WORKOUT', payload: json })
-      setIsEditing(false)
+      dispatch({ type: 'UPDATE_WORKOUT', payload: json });
+      setIsEditing(false);
     }
-  }
+  };
 
   return (
     <div className="workout-details">
       {isEditing ? (
         <form onSubmit={handleEdit}>
-          <label>Title:</label>
           <input
             type="text"
-            value={editedTitle}
-            onChange={(e) => setEditedTitle(e.target.value)}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
-          <label>Load (kg):</label>
           <input
             type="number"
-            value={editedLoad}
-            onChange={(e) => setEditedLoad(e.target.value)}
+            value={load}
+            onChange={(e) => setLoad(e.target.value)}
           />
-          <label>Reps:</label>
           <input
             type="number"
-            value={editedReps}
-            onChange={(e) => setEditedReps(e.target.value)}
+            value={reps}
+            onChange={(e) => setReps(e.target.value)}
           />
-          <button type="submit">Save Changes</button>
+          <button type="submit">Save</button>
+          <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
         </form>
       ) : (
         <>
@@ -85,7 +87,7 @@ const WorkoutDetails = ({ workout }) => {
         </>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default WorkoutDetails
+export default WorkoutDetails;
